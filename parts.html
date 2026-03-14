@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>部品表 — 2D Design Tool</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400&family=Noto+Serif+JP:wght@400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #faf9f7;
+      --text: #2c2c2c;
+      --border: #e0e0e0;
+      --accent: #888;
+    }
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 13px;
+      font-weight: 300;
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+    header h1 {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+    }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .btn {
+      height: 28px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      background: none;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: inherit;
+      font-weight: 300;
+      color: var(--text);
+      transition: all 0.1s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+    .btn:hover { border-color: var(--accent); }
+    main { max-width: 860px; margin: 0 auto; padding: 32px 28px 60px; }
+    .page-title {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 20px;
+      font-weight: 400;
+      margin-bottom: 8px;
+    }
+    .page-sub {
+      font-size: 11px;
+      color: var(--accent);
+      margin-bottom: 32px;
+    }
+    .empty {
+      padding: 48px 0;
+      text-align: center;
+      font-size: 13px;
+      color: #bbb;
+    }
+    .parts-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .parts-table th {
+      text-align: left;
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .parts-table td {
+      padding: 12px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      line-height: 1.6;
+    }
+    .parts-table tr:last-child td { border-bottom: none; }
+    .parts-table tbody tr:hover { background: #f5f4f2; }
+    .part-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px; height: 26px;
+      background: var(--text);
+      color: var(--bg);
+      font-size: 12px;
+      font-weight: 400;
+      flex-shrink: 0;
+    }
+    .part-label { font-size: 12px; }
+    .part-notes { font-size: 11px; color: var(--accent); white-space: pre-wrap; margin-top: 4px; }
+    .part-notes:empty { display: none; }
+
+    @media print {
+      header .header-actions { display: none; }
+      body { background: white; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>部品表</h1>
+  <div class="header-actions">
+    <a href="index.html" class="btn">← デザインツールに戻る</a>
+    <button class="btn" onclick="window.print()">印刷 / PDF</button>
+    <button class="btn" id="btn-refresh">更新</button>
+  </div>
+</header>
+
+<main>
+  <div class="page-title">部品一覧</div>
+  <div class="page-sub" id="subtitle">デザインツールで部品番号を割り当てると、ここに一覧が表示されます。</div>
+  <div id="parts-container"></div>
+</main>
+
+<script>
+function load() {
+  const container = document.getElementById('parts-container');
+  const subtitle   = document.getElementById('subtitle');
+  let parts = [];
+  try { parts = JSON.parse(localStorage.getItem('2d-parts') || '[]'); } catch(e) {}
+
+  if (!parts.length) {
+    container.innerHTML = '<div class="empty">部品がありません。<br>デザインツールで図形を選択し「部品番号を割り当て」してください。</div>';
+    return;
+  }
+
+  subtitle.textContent = `${parts.length} 件の部品`;
+
+  const table = document.createElement('table');
+  table.className = 'parts-table';
+  table.innerHTML = `<thead><tr>
+    <th style="width:52px">No.</th>
+    <th>図形</th>
+    <th>メモ</th>
+  </tr></thead>`;
+  const tbody = document.createElement('tbody');
+
+  for (const p of parts) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="part-num">${p.num}</span></td>
+      <td><div class="part-label">${escHtml(p.label)}</div></td>
+      <td><div class="part-notes">${escHtml(p.notes)}</div></td>
+    `;
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  container.innerHTML = '';
+  container.appendChild(table);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('btn-refresh').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>
