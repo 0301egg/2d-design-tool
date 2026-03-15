@@ -289,7 +289,7 @@
   <span id="st-pos">—</span>
   <span id="st-size">—</span>
   <span id="st-zoom">ズーム: 100%</span>
-  <span style="margin-left:auto;color:#ccc;">V=選択 R=四角 E=楕円 L=直線 T=文字 | Ctrl+G=グループ Ctrl+Z=Undo Del=削除</span>
+  <span style="margin-left:auto;color:#ccc;">V=選択 R=四角 E=楕円 L=直線 T=文字 | Ctrl+C/V=コピペ Ctrl+D=複製 Ctrl+A=全選択 | ↑↓←→=移動(Shift=1mm) | Shift+ドラッグ=軸拘束 | Ctrl+G=グループ Ctrl+Z=Undo Del=削除</span>
 </div>
 
 <script>
@@ -332,6 +332,9 @@ const S = {
   mouse: { x: 0, y: 0 },
   mouseRaw: { x: 0, y: 0 },
   spaceDown: false,
+  shiftDown: false,
+  // clipboard
+  clipboard: [],
   // drawing
   isDraw: false,
   drawP0: null,
@@ -666,7 +669,12 @@ function startDrag(p) {
 
 function updateDrag(p) {
   if (!S.isDrag) return;
-  const dx = sn(p.x - S.dragP0.x), dy = sn(p.y - S.dragP0.y);
+  // delta を sn() せず生の差分で計算（速度を 1:1 に保つ）
+  let dx = p.x - S.dragP0.x, dy = p.y - S.dragP0.y;
+  // Shift キーで水平 / 垂直に拘束
+  if (S.shiftDown) {
+    if (Math.abs(dx) >= Math.abs(dy)) dy = 0; else dx = 0;
+  }
   for (const id of S.selected) {
     const sh = findShape(id);
     if (sh) {
@@ -749,6 +757,49 @@ function endResize() {
   if (!S.isResize) return;
   S.isResize = false;
   persist();
+}
+
+// ── Copy / Paste ───────────────────────────────────────────────────
+function copySelected() {
+  if (!S.selected.length) return;
+  S.clipboard = [];
+  for (const id of S.selected) {
+    const sh = findShape(id);
+    if (sh && !sh.groupId) { S.clipboard.push({ kind:'shape', data: JSON.parse(JSON.stringify(sh)) }); continue; }
+    const g = findGroup(id);
+    if (g) S.clipboard.push({
+      kind:'group',
+      group: JSON.parse(JSON.stringify(g)),
+      shapes: g.shapeIds.map(sid => findShape(sid)).filter(Boolean).map(s => JSON.parse(JSON.stringify(s))),
+    });
+  }
+}
+
+function pasteCopied() {
+  if (!S.clipboard.length) return;
+  saveHistory();
+  const off = 5; // mm オフセット
+  const newSel = [];
+  for (const item of S.clipboard) {
+    if (item.kind === 'group') {
+      const newShapes = item.shapes.map(s => {
+        const ns = { ...s, id: uid(), groupId: null };
+        if (ns.type === 'line') { ns.x1 += off; ns.y1 += off; ns.x2 += off; ns.y2 += off; }
+        else { ns.x += off; ns.y += off; }
+        S.shapes.push(ns); return ns;
+      });
+      const ng = { ...item.group, id: gid(), shapeIds: newShapes.map(s => s.id) };
+      for (const ns of newShapes) ns.groupId = ng.id;
+      S.groups.push(ng); newSel.push(ng.id);
+    } else {
+      const ns = { ...item.data, id: uid(), groupId: null };
+      if (ns.type === 'line') { ns.x1 += off; ns.y1 += off; ns.x2 += off; ns.y2 += off; }
+      else { ns.x += off; ns.y += off; }
+      S.shapes.push(ns); newSel.push(ns.id);
+    }
+  }
+  S.selected = newSel;
+  renderAll(); updatePanel();
 }
 
 // ── Groups ─────────────────────────────────────────────────────────
@@ -1107,19 +1158,38 @@ ca.addEventListener('wheel', e => {
 }, { passive: false });
 
 document.addEventListener('keydown', e => {
+  S.shiftDown = e.shiftKey;
   if (e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
     S.spaceDown = true; ca.className = 'cursor-grab'; e.preventDefault(); return;
   }
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  if (e.key === 'v' || e.key === 'V') setTool('select');
-  if (e.key === 'r' || e.key === 'R') setTool('rect');
-  if (e.key === 'e' || e.key === 'E') setTool('ellipse');
-  if (e.key === 'l' || e.key === 'L') setTool('line');
-  if (e.key === 't' || e.key === 'T') setTool('text');
+  if (!e.ctrlKey) {
+    if (e.key === 'v' || e.key === 'V') setTool('select');
+    if (e.key === 'r' || e.key === 'R') setTool('rect');
+    if (e.key === 'e' || e.key === 'E') setTool('ellipse');
+    if (e.key === 'l' || e.key === 'L') setTool('line');
+    if (e.key === 't' || e.key === 'T') setTool('text');
+  }
   if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
   if (e.ctrlKey && !e.shiftKey && e.key === 'g') { e.preventDefault(); groupSelected(); }
   if (e.ctrlKey &&  e.shiftKey && e.key === 'G') { e.preventDefault(); ungroupSelected(); }
   if (e.ctrlKey && e.key === 'p') { e.preventDefault(); exportPDF(); }
+  // Ctrl+A：全選択
+  if (e.ctrlKey && e.key === 'a') {
+    e.preventDefault();
+    S.selected = [
+      ...S.shapes.filter(s => !s.groupId).map(s => s.id),
+      ...S.groups.map(g => g.id),
+    ];
+    renderSelection(); updatePanel();
+  }
+  // Ctrl+C：コピー
+  if (e.ctrlKey && e.key === 'c') { copySelected(); }
+  // Ctrl+V：ペースト
+  if (e.ctrlKey && e.key === 'v') { e.preventDefault(); pasteCopied(); }
+  // Ctrl+D：複製
+  if (e.ctrlKey && e.key === 'd') { e.preventDefault(); copySelected(); pasteCopied(); }
+  // Delete / Backspace：削除
   if ((e.key === 'Delete' || e.key === 'Backspace') && S.selected.length) {
     e.preventDefault(); saveHistory();
     for (const id of S.selected) {
@@ -1130,9 +1200,32 @@ document.addEventListener('keydown', e => {
     S.selected = []; renderAll(); updatePanel();
   }
   if (e.key === 'Escape') { S.selected = []; renderSelection(); updatePanel(); }
+  // 矢印キー：ナッジ移動（Shift 併用で 1mm, 通常 0.1mm）
+  if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key) && S.selected.length) {
+    e.preventDefault();
+    const step = e.shiftKey ? 1 : 0.1;
+    const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+    const dy = e.key === 'ArrowUp'   ? -step : e.key === 'ArrowDown'  ? step : 0;
+    saveHistory();
+    for (const id of S.selected) {
+      const sh = findShape(id);
+      if (sh) {
+        if (sh.type === 'line') { sh.x1=sn(sh.x1+dx); sh.y1=sn(sh.y1+dy); sh.x2=sn(sh.x2+dx); sh.y2=sn(sh.y2+dy); }
+        else { sh.x=sn(sh.x+dx); sh.y=sn(sh.y+dy); }
+      }
+      const g = findGroup(id);
+      if (g) for (const sid of g.shapeIds) {
+        const s = findShape(sid); if (!s) continue;
+        if (s.type === 'line') { s.x1=sn(s.x1+dx); s.y1=sn(s.y1+dy); s.x2=sn(s.x2+dx); s.y2=sn(s.y2+dy); }
+        else { s.x=sn(s.x+dx); s.y=sn(s.y+dy); }
+      }
+    }
+    renderAll(); updatePanelCoords();
+  }
 });
 
 document.addEventListener('keyup', e => {
+  S.shiftDown = e.shiftKey;
   if (e.key === ' ') {
     S.spaceDown = false;
     ca.className = S.tool === 'select' ? 'cursor-default' : 'cursor-cross';
