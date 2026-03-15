@@ -41,7 +41,11 @@
       gap: 3px;
       flex-shrink: 0;
       user-select: none;
+      overflow-x: auto;
+      overflow-y: hidden;
     }
+    #toolbar::-webkit-scrollbar { height: 3px; }
+    #toolbar::-webkit-scrollbar-thumb { background: var(--border); }
     .tb-btn {
       height: 26px;
       padding: 0 9px;
@@ -60,7 +64,7 @@
     .tb-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
     .tb-btn.primary { border-color: var(--border); }
     .tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 3px; flex-shrink: 0; }
-    .tb-right { margin-left: auto; display: flex; align-items: center; gap: 3px; }
+    .tb-right { margin-left: auto; display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
 
     /* ── Main ── */
     #main { flex: 1; display: flex; overflow: hidden; }
@@ -259,7 +263,7 @@
   <button class="tb-btn" data-tool="rect"     title="四角形 (R)">□ 四角</button>
   <button class="tb-btn" data-tool="ellipse"  title="真円 (E)">○ 真円</button>
   <button class="tb-btn" data-tool="triangle" title="三角形 (3)">△ 三角</button>
-  <button class="tb-btn" data-tool="pentagon" title="五角形 (5)">⬠ 五角形</button>
+  <button class="tb-btn" data-tool="pentagon" title="五角形 (5)">⬠ 五角</button>
   <button class="tb-btn" data-tool="line"     title="直線 (L)">／ 直線</button>
   <button class="tb-btn" data-tool="path"     title="流線形 (F)">〜 流線</button>
   <button class="tb-btn" data-tool="text"     title="テキスト (T)">T テキスト</button>
