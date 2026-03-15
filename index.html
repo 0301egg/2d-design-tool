@@ -881,7 +881,8 @@ function updateResize(p) {
     if (h.includes('s')) { nh = Math.max(0.1, b0.h + dy); }
     if (h.includes('n')) { nh = Math.max(0.1, b0.h - dy); ny = b0.y + b0.h - nh; }
   }
-  const sx = nw / b0.w, sy = nh / b0.h;
+  const sx = b0.w > 1e-6 ? nw / b0.w : 1;
+  const sy = b0.h > 1e-6 ? nh / b0.h : 1;
   // スナップなしでスケール（離したときにスナップ）
   for (const orig of S.resizeShapes0) {
     const s = findShape(orig.id); if (!s) continue;
