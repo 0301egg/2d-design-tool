@@ -441,9 +441,12 @@ function makeShapeEl(s) {
   let e;
   const common = { fill: s.fill, stroke: s.stroke, 'stroke-width': s.sw };
   if (s.type === 'rect') {
-    e = el('rect', { x: s.x, y: s.y, width: s.w, height: s.h, ...common });
+    // fill:none だとクリック判定が線上のみになるため、透明な塗りで内部もクリック可能に
+    const hitFill = (s.fill === 'none' || !s.fill) ? 'transparent' : s.fill;
+    e = el('rect', { x: s.x, y: s.y, width: s.w, height: s.h, ...common, fill: hitFill });
   } else if (s.type === 'ellipse') {
-    e = el('ellipse', { cx: s.x + s.w/2, cy: s.y + s.h/2, rx: s.w/2, ry: s.h/2, ...common });
+    const hitFill = (s.fill === 'none' || !s.fill) ? 'transparent' : s.fill;
+    e = el('ellipse', { cx: s.x + s.w/2, cy: s.y + s.h/2, rx: s.w/2, ry: s.h/2, ...common, fill: hitFill });
   } else if (s.type === 'line') {
     e = el('line', { x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2, stroke: s.stroke, 'stroke-width': s.sw });
   } else if (s.type === 'text') {
@@ -451,7 +454,27 @@ function makeShapeEl(s) {
       'font-family': 'sans-serif', 'font-weight': '300' });
     e.textContent = s.text;
   }
-  if (e) e.dataset.id = s.id;
+  if (e) {
+    e.dataset.id = s.id;
+    e.style.cursor = 'pointer';
+    e.addEventListener('mousedown', ev => {
+      if (S.tool !== 'select') return;
+      ev.stopPropagation();
+      const targetId = s.groupId || s.id;
+      if (!ev.shiftKey) {
+        S.selected = [targetId];
+      } else {
+        S.selected = S.selected.includes(targetId)
+          ? S.selected.filter(x => x !== targetId)
+          : [...S.selected, targetId];
+      }
+      renderSelection();
+      updatePanel();
+      // ドラッグ開始
+      const mm = toMM(ev.clientX, ev.clientY);
+      startDrag(mm);
+    });
+  }
   return e;
 }
 
@@ -502,7 +525,7 @@ function renderSelection() {
   const b = selectionBbox();
   if (!b) return;
   const z = zoom();
-  const hs = 3.5 / z; // handle size in mm
+  const hs = 7 / z; // handle size in mm
 
   // Dashed bounding box
   el('rect', {
