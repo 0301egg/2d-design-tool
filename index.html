@@ -53,17 +53,15 @@
     #btn-draw-tool::after { content: '▾'; font-size: 9px; opacity: 0.6; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); }
     .tb-draw-panel {
       display: none;
-      position: absolute;
-      top: calc(100% + 5px);
-      left: 0;
+      position: fixed;
       background: var(--bg);
       border: 1px solid var(--border);
       box-shadow: 0 6px 18px rgba(0,0,0,0.13);
       padding: 5px;
-      z-index: 200;
+      z-index: 1000;
       flex-direction: column;
       gap: 2px;
-      min-width: 120px;
+      min-width: 130px;
     }
     .tb-draw-panel.open { display: flex; }
     .tb-draw-panel .tb-btn { text-align: left; width: 100%; padding: 0 10px; }
@@ -284,15 +282,6 @@
   <div class="tb-sep"></div>
   <div class="tb-draw-wrap">
     <button class="tb-btn primary" id="btn-draw-tool" title="図形描画ツール">図形の描画</button>
-    <div class="tb-draw-panel" id="draw-panel">
-      <button class="tb-btn" data-tool="rect"     title="四角形 (R)">□ 四角形</button>
-      <button class="tb-btn" data-tool="ellipse"  title="真円 (E)">○ 真円</button>
-      <button class="tb-btn" data-tool="triangle" title="三角形 (3)">△ 三角形</button>
-      <button class="tb-btn" data-tool="pentagon" title="五角形 (5)">⬠ 五角形</button>
-      <button class="tb-btn" data-tool="line"     title="直線 (L)">／ 直線</button>
-      <button class="tb-btn" data-tool="path"     title="流線形 (F)">〜 流線形</button>
-      <button class="tb-btn" data-tool="text"     title="テキスト (T)">T テキスト</button>
-    </div>
   </div>
   <div class="tb-sep"></div>
   <button class="tb-btn primary active" id="btn-grid" title="グリッド表示切替 (G)">⊞ グリッド</button>
@@ -1604,7 +1593,12 @@ const DRAW_TOOLS = new Set(['rect','ellipse','triangle','pentagon','line','path'
 const DRAW_ICONS = { rect:'□ 四角形', ellipse:'○ 真円', triangle:'△ 三角形', pentagon:'⬠ 五角形', line:'／ 直線', path:'〜 流線形', text:'T テキスト' };
 btnDrawTool.addEventListener('click', e => {
   e.stopPropagation();
-  drawPanel.classList.toggle('open');
+  const isOpen = drawPanel.classList.contains('open');
+  if (isOpen) { drawPanel.classList.remove('open'); return; }
+  const r = btnDrawTool.getBoundingClientRect();
+  drawPanel.style.top  = (r.bottom + 4) + 'px';
+  drawPanel.style.left = r.left + 'px';
+  drawPanel.classList.add('open');
 });
 document.addEventListener('mousedown', e => {
   if (!drawPanel.contains(e.target) && e.target !== btnDrawTool) drawPanel.classList.remove('open');
@@ -1668,5 +1662,16 @@ updatePanel();
 
 })();
 </script>
+
+<!-- Draw tool dropdown panel (body level to escape toolbar overflow clipping) -->
+<div class="tb-draw-panel" id="draw-panel" style="position:fixed;">
+  <button class="tb-btn" data-tool="rect"     title="四角形 (R)">□ 四角形</button>
+  <button class="tb-btn" data-tool="ellipse"  title="真円 (E)">○ 真円</button>
+  <button class="tb-btn" data-tool="triangle" title="三角形 (3)">△ 三角形</button>
+  <button class="tb-btn" data-tool="pentagon" title="五角形 (5)">⬠ 五角形</button>
+  <button class="tb-btn" data-tool="line"     title="直線 (L)">／ 直線</button>
+  <button class="tb-btn" data-tool="path"     title="流線形 (F)">〜 流線形</button>
+  <button class="tb-btn" data-tool="text"     title="テキスト (T)">T テキスト</button>
+</div>
 </body>
 </html>
