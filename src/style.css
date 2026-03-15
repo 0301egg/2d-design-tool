@@ -1,0 +1,265 @@
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #faf9f7;
+      --text: #2c2c2c;
+      --border: #e0e0e0;
+      --accent: #888;
+      --blue: #2563eb;
+      --gold: #b8860b;
+      --toolbar-h: 42px;
+      --panel-w: 232px;
+      --status-h: 26px;
+    }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--text);
+      background: #ddd;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Toolbar ── */
+    #toolbar {
+      height: var(--toolbar-h);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 3px;
+      flex-shrink: 0;
+      user-select: none;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    #toolbar::-webkit-scrollbar { height: 3px; }
+    #toolbar::-webkit-scrollbar-thumb { background: var(--border); }
+
+    /* ── Draw-tool dropdown ── */
+    .tb-draw-wrap { position: relative; flex-shrink: 0; }
+    #btn-draw-tool { padding-right: 16px; position: relative; }
+    #btn-draw-tool::after { content: '▾'; font-size: 9px; opacity: 0.6; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); }
+    .tb-draw-panel {
+      display: none;
+      position: fixed;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.13);
+      padding: 5px;
+      z-index: 1000;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 130px;
+    }
+    .tb-draw-panel.open { display: flex; }
+    .tb-draw-panel .tb-btn { text-align: left; width: 100%; padding: 0 10px; }
+    .tb-btn {
+      height: 26px;
+      padding: 0 9px;
+      border: 1px solid transparent;
+      background: none;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: inherit;
+      font-weight: 300;
+      color: var(--text);
+      border-radius: 2px;
+      white-space: nowrap;
+      transition: all 0.1s;
+    }
+    .tb-btn:hover { background: #f0eeec; border-color: var(--border); }
+    .tb-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .tb-btn.primary { border-color: var(--border); }
+    .tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 3px; flex-shrink: 0; }
+    .tb-right { margin-left: auto; display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+
+    /* ── Main ── */
+    #main { flex: 1; display: flex; overflow: hidden; }
+
+    /* ── Canvas area ── */
+    #canvas-area {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      background: #c8c7c5;
+    }
+    #svg-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: block;
+    }
+    .cursor-default  { cursor: default; }
+    .cursor-cross    { cursor: crosshair; }
+    .cursor-grab     { cursor: grab; }
+    .cursor-grabbing { cursor: grabbing; }
+    .cursor-text     { cursor: text; }
+
+    /* ── Properties panel ── */
+    #props-panel {
+      width: var(--panel-w);
+      background: var(--bg);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .p-section {
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    .p-title {
+      font-size: 9.5px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 9px;
+    }
+    .p-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+    .p-lbl {
+      font-size: 10px;
+      color: var(--accent);
+      width: 20px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+    .p-lbl-wide {
+      font-size: 10px;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .p-in {
+      flex: 1;
+      height: 22px;
+      border: 1px solid var(--border);
+      background: white;
+      padding: 0 5px;
+      font-size: 11px;
+      font-family: inherit;
+      font-weight: 300;
+      color: var(--text);
+      outline: none;
+      min-width: 0;
+    }
+    .p-in:focus { border-color: var(--accent); }
+    .p-in[type="color"] { padding: 1px 2px; width: 34px; flex: none; cursor: pointer; }
+    .p-unit { font-size: 10px; color: #bbb; width: 12px; flex-shrink: 0; }
+    textarea.p-in { height: auto; resize: vertical; padding: 4px 5px; line-height: 1.6; }
+    .p-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #bbb;
+      text-align: center;
+      padding: 20px;
+    }
+    .p-num-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px; height: 22px;
+      background: var(--text);
+      color: var(--bg);
+      font-size: 11px;
+      font-weight: 400;
+      flex-shrink: 0;
+    }
+    .p-num-none {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px; height: 22px;
+      border: 1px dashed #ccc;
+      color: #bbb;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .p-small-btn {
+      height: 22px;
+      padding: 0 7px;
+      border: 1px solid var(--border);
+      background: none;
+      font-size: 10px;
+      font-family: inherit;
+      cursor: pointer;
+      color: var(--text);
+      transition: all 0.1s;
+    }
+    .p-small-btn:hover { border-color: var(--accent); }
+
+    /* Golden ratio indicator */
+    .golden-box {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      background: #fffbeb;
+      border: 1px solid #f0d040;
+      font-size: 10px;
+      color: var(--gold);
+      margin-top: 6px;
+    }
+    .golden-box.on { display: flex; }
+    .golden-box button {
+      background: #f0d040;
+      border: none;
+      cursor: pointer;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-family: inherit;
+      font-weight: 400;
+      margin-left: auto;
+    }
+    .golden-box button:hover { background: #e0c030; }
+
+    /* ── Keyboard shortcut modal ── */
+    #kbd-modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    #kbd-modal.open { display: flex; }
+    #kbd-box {
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 18px 22px; max-width: 520px; width: 92%;
+      max-height: 82vh; overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    #kbd-box h2 { font-size: 13px; font-weight: 400; margin-bottom: 14px; }
+    .kbd-section { margin-bottom: 12px; }
+    .kbd-stitle { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 5px; }
+    .kbd-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; font-size: 11px; }
+    .kbd-keys { display: flex; gap: 3px; flex-shrink: 0; min-width: 160px; flex-wrap: wrap; }
+    kbd {
+      background: #f0eeec; border: 1px solid #ccc; border-bottom-width: 2px;
+      padding: 1px 6px; font-size: 10px; font-family: inherit;
+      border-radius: 2px; white-space: nowrap;
+    }
+    .kbd-desc { color: #555; }
+
+    /* ── Status bar ── */
+    #statusbar {
+      height: var(--status-h);
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 14px;
+      font-size: 10px;
+      color: var(--accent);
+      flex-shrink: 0;
+      user-select: none;
+    }
+    #statusbar span { white-space: nowrap; }
