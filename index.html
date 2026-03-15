@@ -257,9 +257,11 @@
 <div id="toolbar">
   <button class="tb-btn active" data-tool="select" title="選択 (V)">選択</button>
   <button class="tb-btn" data-tool="rect"    title="四角形 (R)">□ 四角</button>
-  <button class="tb-btn" data-tool="ellipse" title="楕円 (E)">○ 楕円</button>
+  <button class="tb-btn" data-tool="ellipse" title="真円 (E)">○ 真円</button>
   <button class="tb-btn" data-tool="line"    title="直線 (L)">／ 直線</button>
   <button class="tb-btn" data-tool="text"    title="テキスト (T)">T テキスト</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn primary active" id="btn-grid" title="グリッド表示切替 (G)">⊞ グリッド</button>
   <div class="tb-sep"></div>
   <button class="tb-btn primary" id="btn-group"   title="グループ化 (Ctrl+G)">グループ化</button>
   <button class="tb-btn primary" id="btn-ungroup" title="グループ解除 (Ctrl+Shift+G)">解除</button>
@@ -272,6 +274,7 @@
     </a>
     <div class="tb-sep"></div>
     <button class="tb-btn" id="btn-undo" title="元に戻す (Ctrl+Z)">↩ Undo</button>
+    <button class="tb-btn" id="btn-redo" title="やり直し (Ctrl+Y)">↪ Redo</button>
     <button class="tb-btn danger" id="btn-clear">クリア</button>
     <div class="tb-sep"></div>
     <button class="tb-btn primary" id="btn-kbd" title="キーボードショートカット一覧 (?)">？ キー一覧</button>
@@ -296,11 +299,14 @@
     <div class="kbd-section">
       <div class="kbd-stitle">選択・編集</div>
       <div class="kbd-row"><div class="kbd-keys"><kbd>Ctrl</kbd><kbd>A</kbd></div><span class="kbd-desc">全選択</span></div>
+      <div class="kbd-row"><div class="kbd-keys"><kbd>Tab</kbd> / <kbd>Shift</kbd><kbd>Tab</kbd></div><span class="kbd-desc">次/前の図形を選択</span></div>
       <div class="kbd-row"><div class="kbd-keys"><kbd>Esc</kbd></div><span class="kbd-desc">選択解除</span></div>
       <div class="kbd-row"><div class="kbd-keys"><kbd>Del</kbd> / <kbd>Backspace</kbd></div><span class="kbd-desc">削除</span></div>
       <div class="kbd-row"><div class="kbd-keys"><kbd>Ctrl</kbd><kbd>Z</kbd></div><span class="kbd-desc">Undo（元に戻す）</span></div>
+      <div class="kbd-row"><div class="kbd-keys"><kbd>Ctrl</kbd><kbd>Y</kbd></div><span class="kbd-desc">Redo（やり直し）</span></div>
       <div class="kbd-row"><div class="kbd-keys"><kbd>Ctrl</kbd><kbd>C</kbd></div><span class="kbd-desc">コピー</span></div>
       <div class="kbd-row"><div class="kbd-keys"><kbd>Ctrl</kbd><kbd>V</kbd></div><span class="kbd-desc">ペースト（5mmオフセット）</span></div>
+      <div class="kbd-row"><div class="kbd-keys"><kbd>Ctrl</kbd><kbd>X</kbd></div><span class="kbd-desc">切り取り</span></div>
       <div class="kbd-row"><div class="kbd-keys"><kbd>Ctrl</kbd><kbd>D</kbd></div><span class="kbd-desc">複製</span></div>
     </div>
     <div class="kbd-section">
@@ -319,13 +325,17 @@
       <div class="kbd-row"><div class="kbd-keys">マウスホイール</div><span class="kbd-desc">ズームイン / アウト</span></div>
       <div class="kbd-row"><div class="kbd-keys"><kbd>Space</kbd> + ドラッグ</div><span class="kbd-desc">パン（移動）</span></div>
       <div class="kbd-row"><div class="kbd-keys">中ボタンドラッグ</div><span class="kbd-desc">パン（移動）</span></div>
+      <div class="kbd-row"><div class="kbd-keys"><kbd>G</kbd></div><span class="kbd-desc">グリッド表示切替</span></div>
       <div class="kbd-row"><div class="kbd-keys"><kbd>Ctrl</kbd><kbd>P</kbd></div><span class="kbd-desc">PDF出力</span></div>
       <div class="kbd-row"><div class="kbd-keys"><kbd>?</kbd> ボタン</div><span class="kbd-desc">このダイアログを開く</span></div>
     </div>
     <div class="kbd-section">
       <div class="kbd-stitle">図形の描画</div>
-      <div class="kbd-row"><div class="kbd-keys">クリック</div><span class="kbd-desc">30×20mm のデフォルトサイズで配置</span></div>
-      <div class="kbd-row"><div class="kbd-keys">ドラッグ</div><span class="kbd-desc">任意サイズで描画</span></div>
+      <div class="kbd-row"><div class="kbd-keys">クリック</div><span class="kbd-desc">デフォルトサイズで配置（描画後に選択モードに戻る）</span></div>
+      <div class="kbd-row"><div class="kbd-keys">ドラッグ</div><span class="kbd-desc">任意サイズで描画（描画後に選択モードに戻る）</span></div>
+      <div class="kbd-row"><div class="kbd-keys">真円ドラッグ</div><span class="kbd-desc">短辺を直径として正円を描画。ハンドルで引き延ばして楕円に</span></div>
+      <div class="kbd-row"><div class="kbd-keys">コーナーハンドル</div><span class="kbd-desc">縦横比を維持して拡縮</span></div>
+      <div class="kbd-row"><div class="kbd-keys">辺ハンドル</div><span class="kbd-desc">縦または横のみ自由に変形</span></div>
     </div>
   </div>
 </div>
@@ -432,6 +442,7 @@ const S = {
   panVb0: null,
   // canvas
   bgColor: '#ffffff',
+  showGrid: true,
   // history
   history: [],
   histIdx: -1,
@@ -513,6 +524,12 @@ function applyVb() {
 }
 function zoom() { return svg.clientWidth / S.vb.w; }
 function applyBgColor() { document.getElementById('page').setAttribute('fill', S.bgColor); }
+function applyGrid() {
+  const gridEl = document.getElementById('grid');
+  if (gridEl) gridEl.style.display = S.showGrid ? '' : 'none';
+  const btn = document.getElementById('btn-grid');
+  if (btn) btn.classList.toggle('active', S.showGrid);
+}
 
 function toMM(cx, cy) {
   const r = svg.getBoundingClientRect();
@@ -668,12 +685,20 @@ function updateDraw(p) {
   const previewAttr = { fill:'rgba(37,99,235,0.07)', stroke:'#2563eb', 'stroke-width': 0.3, 'stroke-dasharray':'2,1.2' };
   let e;
   if (S.tool === 'rect')    e = el('rect',    { x:minX, y:minY, width:w, height:h, ...previewAttr });
-  if (S.tool === 'ellipse') e = el('ellipse', { cx:minX+w/2, cy:minY+h/2, rx:w/2, ry:h/2, ...previewAttr });
+  if (S.tool === 'ellipse') {
+    // 真円：ドラッグ距離の短い方を直径として、始点を基準に描画
+    const side = Math.min(w, h);
+    const ex = x1 >= x0 ? x0 : x0 - side;
+    const ey = y1 >= y0 ? y0 : y0 - side;
+    e = el('ellipse', { cx: ex+side/2, cy: ey+side/2, rx: side/2, ry: side/2, ...previewAttr });
+  }
   if (S.tool === 'line')    e = el('line',    { x1:x0, y1:y0, x2:x1, y2:y1, stroke:'#2563eb', 'stroke-width':0.4 });
   if (e) layerPreview.appendChild(e);
   // Dimension + golden ratio indicator during draw
-  if (w > 0 && h > 0 && S.tool !== 'line') {
-    const gld = goldenCheck(w, h);
+  const dispW = S.tool === 'ellipse' ? Math.min(w,h) : w;
+  const dispH = S.tool === 'ellipse' ? Math.min(w,h) : h;
+  if (dispW > 0 && S.tool !== 'line') {
+    const gld = S.tool !== 'ellipse' ? goldenCheck(dispW, dispH) : null;
     const z = zoom();
     const t = el('text', {
       x: minX + w/2, y: minY - 2/z,
@@ -681,9 +706,11 @@ function updateDraw(p) {
       'text-anchor': 'middle', 'font-family': 'sans-serif', 'font-weight': '400',
       'pointer-events': 'none',
     }, layerPreview);
-    t.textContent = `${fmt(w)} × ${fmt(h)} mm` + (gld ? '  ✦φ' : '');
+    t.textContent = S.tool === 'ellipse'
+      ? `⌀ ${fmt(dispW)} mm`
+      : `${fmt(dispW)} × ${fmt(dispH)} mm` + (gld ? '  ✦φ' : '');
   }
-  document.getElementById('st-size').textContent = w > 0 || h > 0 ? `${fmt(w)} × ${fmt(h)} mm` : '—';
+  document.getElementById('st-size').textContent = dispW > 0 || dispH > 0 ? (S.tool === 'ellipse' ? `⌀ ${fmt(dispW)} mm` : `${fmt(dispW)} × ${fmt(dispH)} mm`) : '—';
 }
 
 function endDraw(p) {
@@ -698,17 +725,27 @@ function endDraw(p) {
   const def = { fill:'#ffffff', stroke:'#2c2c2c', sw:0.5, partNum:null, notes:'', groupId:null };
   let s;
   if (w < 0.2 && h < 0.2) {
-    // シングルクリック：デフォルトサイズの図形をカーソル位置に配置
-    const dw = 30, dh = 20;
-    if (S.tool === 'rect')    s = { ...def, id:uid(), type:'rect',    x:sn(x0-dw/2), y:sn(y0-dh/2), w:dw, h:dh };
-    if (S.tool === 'ellipse') s = { ...def, id:uid(), type:'ellipse', x:sn(x0-dw/2), y:sn(y0-dh/2), w:dw, h:dh };
+    // シングルクリック：デフォルトサイズで配置
+    const dw = 30;
+    if (S.tool === 'rect')    s = { ...def, id:uid(), type:'rect',    x:sn(x0-dw/2), y:sn(y0-10), w:dw, h:20 };
+    if (S.tool === 'ellipse') s = { ...def, id:uid(), type:'ellipse', x:sn(x0-10),   y:sn(y0-10), w:20, h:20 }; // 真円
     if (S.tool === 'line')    s = { ...def, id:uid(), type:'line', x1:sn(x0-dw/2), y1:y0, x2:sn(x0+dw/2), y2:y0, fill:'none' };
   } else {
     if (S.tool === 'rect')    s = { ...def, id:uid(), type:'rect',    x:minX, y:minY, w, h };
-    if (S.tool === 'ellipse') s = { ...def, id:uid(), type:'ellipse', x:minX, y:minY, w, h };
+    if (S.tool === 'ellipse') {
+      // 真円：短辺を直径として始点から描画
+      const side = Math.min(w, h);
+      const ex = x1 >= x0 ? x0 : x0 - side;
+      const ey = y1 >= y0 ? y0 : y0 - side;
+      s = { ...def, id:uid(), type:'ellipse', x:ex, y:ey, w:side, h:side };
+    }
     if (S.tool === 'line')    s = { ...def, id:uid(), type:'line', x1:x0,y1:y0,x2:x1,y2:y1, fill:'none' };
   }
-  if (s) { S.shapes.push(s); S.selected = [s.id]; renderAll(); updatePanel(); }
+  if (s) {
+    S.shapes.push(s); S.selected = [s.id]; renderAll(); updatePanel();
+    // 描画後は自動的に選択モードに戻る
+    setTool('select');
+  }
 }
 
 // ── Text placement ─────────────────────────────────────────────────
@@ -821,10 +858,29 @@ function updateResize(p) {
   const dx = p.x - S.dragP0.x, dy = p.y - S.dragP0.y;
   let nx = b0.x, ny = b0.y, nw = b0.w, nh = b0.h;
   const h = S.resizeHandle;
-  if (h.includes('e')) { nw = Math.max(0.1, b0.w + dx); }
-  if (h.includes('w')) { nw = Math.max(0.1, b0.w - dx); nx = b0.x + b0.w - nw; }
-  if (h.includes('s')) { nh = Math.max(0.1, b0.h + dy); }
-  if (h.includes('n')) { nh = Math.max(0.1, b0.h - dy); ny = b0.y + b0.h - nh; }
+  const isCorner = h === 'nw' || h === 'ne' || h === 'se' || h === 'sw';
+  if (isCorner) {
+    // 対角ハンドル：縦横比を維持したまま拡縮
+    // 固定コーナーからマウスへのベクトルを元対角線に射影してスケールを決定
+    const D2 = b0.w * b0.w + b0.h * b0.h;
+    let scale = 1;
+    if (h === 'se') scale = ((b0.w + dx) * b0.w + (b0.h + dy) * b0.h) / D2;
+    if (h === 'nw') scale = ((b0.w - dx) * b0.w + (b0.h - dy) * b0.h) / D2;
+    if (h === 'ne') scale = ((b0.w + dx) * b0.w + (b0.h - dy) * b0.h) / D2;
+    if (h === 'sw') scale = ((b0.w - dx) * b0.w + (b0.h + dy) * b0.h) / D2;
+    const minScale = 0.1 / Math.min(b0.w, b0.h);
+    scale = Math.max(scale, minScale);
+    nw = b0.w * scale; nh = b0.h * scale;
+    if (h === 'nw') { nx = b0.x + b0.w - nw; ny = b0.y + b0.h - nh; }
+    if (h === 'ne') { ny = b0.y + b0.h - nh; }
+    if (h === 'sw') { nx = b0.x + b0.w - nw; }
+    // se: nx=b0.x, ny=b0.y (変化なし)
+  } else {
+    if (h.includes('e')) { nw = Math.max(0.1, b0.w + dx); }
+    if (h.includes('w')) { nw = Math.max(0.1, b0.w - dx); nx = b0.x + b0.w - nw; }
+    if (h.includes('s')) { nh = Math.max(0.1, b0.h + dy); }
+    if (h.includes('n')) { nh = Math.max(0.1, b0.h - dy); ny = b0.y + b0.h - nh; }
+  }
   const sx = nw / b0.w, sy = nh / b0.h;
   // スナップなしでスケール（離したときにスナップ）
   for (const orig of S.resizeShapes0) {
@@ -1172,8 +1228,27 @@ function undo() {
   S.selected = [];
   renderAll(); updatePanel();
 }
+function redo() {
+  if (S.histIdx >= S.history.length - 1) return;
+  S.histIdx++;
+  const d = JSON.parse(S.history[S.histIdx]);
+  S.shapes = d.shapes; S.groups = d.groups; S.nextId = d.nextId; S.nextPart = d.nextPart;
+  S.selected = [];
+  renderAll(); updatePanel();
+}
+function cutSelected() {
+  if (!S.selected.length) return;
+  copySelected();
+  saveHistory();
+  for (const id of S.selected) {
+    const g = findGroup(id);
+    if (g) { for (const sid of g.shapeIds) { const s=findShape(sid); if(s) s.groupId=null; } S.groups=S.groups.filter(x=>x.id!==id); }
+    else S.shapes = S.shapes.filter(s => s.id !== id);
+  }
+  S.selected = []; renderAll(); updatePanel();
+}
 function persist() {
-  localStorage.setItem('2d-tool', JSON.stringify({ shapes:S.shapes, groups:S.groups, nextId:S.nextId, nextPart:S.nextPart, bgColor:S.bgColor }));
+  localStorage.setItem('2d-tool', JSON.stringify({ shapes:S.shapes, groups:S.groups, nextId:S.nextId, nextPart:S.nextPart, bgColor:S.bgColor, showGrid:S.showGrid }));
   // Also save parts list for parts.html
   const parts = [];
   for (const g of S.groups)
@@ -1189,7 +1264,7 @@ function persist() {
 function loadState() {
   try {
     const d = JSON.parse(localStorage.getItem('2d-tool') || 'null');
-    if (d) { S.shapes = d.shapes||[]; S.groups = d.groups||[]; S.nextId = d.nextId||1; S.nextPart = d.nextPart||1; if (d.bgColor) S.bgColor = d.bgColor; }
+    if (d) { S.shapes = d.shapes||[]; S.groups = d.groups||[]; S.nextId = d.nextId||1; S.nextPart = d.nextPart||1; if (d.bgColor) S.bgColor = d.bgColor; if (d.showGrid !== undefined) S.showGrid = d.showGrid; }
   } catch(e) {}
 }
 function renderAll() { renderShapes(); renderSelection(); persist(); }
@@ -1274,6 +1349,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 't' || e.key === 'T') setTool('text');
   }
   if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
+  if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) { e.preventDefault(); redo(); }
   if (e.ctrlKey && !e.shiftKey && e.key === 'g') { e.preventDefault(); groupSelected(); }
   if (e.ctrlKey &&  e.shiftKey && e.key === 'G') { e.preventDefault(); ungroupSelected(); }
   if (e.ctrlKey && e.key === 'p') { e.preventDefault(); exportPDF(); }
@@ -1292,6 +1368,8 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.key === 'v') { e.preventDefault(); pasteCopied(); }
   // Ctrl+D：複製
   if (e.ctrlKey && e.key === 'd') { e.preventDefault(); copySelected(); pasteCopied(); }
+  // Ctrl+X：切り取り
+  if (e.ctrlKey && e.key === 'x') { e.preventDefault(); cutSelected(); }
   // Delete / Backspace：削除
   if ((e.key === 'Delete' || e.key === 'Backspace') && S.selected.length) {
     e.preventDefault(); saveHistory();
@@ -1303,6 +1381,25 @@ document.addEventListener('keydown', e => {
     S.selected = []; renderAll(); updatePanel();
   }
   if (e.key === 'Escape') { S.selected = []; renderSelection(); updatePanel(); }
+  // G：グリッド表示切替
+  if ((e.key === 'g' || e.key === 'G') && !e.ctrlKey) {
+    S.showGrid = !S.showGrid; applyGrid(); persist();
+  }
+  // Tab / Shift+Tab：図形を順に選択
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const all = [
+      ...S.shapes.filter(s => !s.groupId).map(s => s.id),
+      ...S.groups.map(g => g.id),
+    ];
+    if (!all.length) return;
+    const cur = S.selected[0];
+    const idx = all.indexOf(cur);
+    const next = e.shiftKey
+      ? all[(idx - 1 + all.length) % all.length]
+      : all[(idx + 1) % all.length];
+    S.selected = [next]; renderSelection(); updatePanel();
+  }
   // 矢印キー：ナッジ移動（Shift 併用で 1mm, 通常 0.1mm）
   if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key) && S.selected.length) {
     e.preventDefault();
@@ -1361,6 +1458,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeKbd();
 }, true); // capture phase so it fires before other handlers
 
+document.getElementById('btn-grid').addEventListener('click', () => { S.showGrid = !S.showGrid; applyGrid(); persist(); });
+document.getElementById('btn-redo').addEventListener('click', redo);
 document.getElementById('btn-group').addEventListener('click', groupSelected);
 document.getElementById('btn-ungroup').addEventListener('click', ungroupSelected);
 document.getElementById('btn-part').addEventListener('click', assignPart);
@@ -1377,6 +1476,7 @@ loadState();
 saveHistory();
 applyVb();
 applyBgColor();
+applyGrid();
 renderAll();
 updatePanel();
 
