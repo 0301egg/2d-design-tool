@@ -46,6 +46,27 @@
     }
     #toolbar::-webkit-scrollbar { height: 3px; }
     #toolbar::-webkit-scrollbar-thumb { background: var(--border); }
+
+    /* ── Draw-tool dropdown ── */
+    .tb-draw-wrap { position: relative; flex-shrink: 0; }
+    #btn-draw-tool { padding-right: 16px; position: relative; }
+    #btn-draw-tool::after { content: '▾'; font-size: 9px; opacity: 0.6; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); }
+    .tb-draw-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 5px);
+      left: 0;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.13);
+      padding: 5px;
+      z-index: 200;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 120px;
+    }
+    .tb-draw-panel.open { display: flex; }
+    .tb-draw-panel .tb-btn { text-align: left; width: 100%; padding: 0 10px; }
     .tb-btn {
       height: 26px;
       padding: 0 9px;
@@ -260,13 +281,19 @@
 <!-- Toolbar -->
 <div id="toolbar">
   <button class="tb-btn active" data-tool="select" title="選択 (V)">選択</button>
-  <button class="tb-btn" data-tool="rect"     title="四角形 (R)">□ 四角</button>
-  <button class="tb-btn" data-tool="ellipse"  title="真円 (E)">○ 真円</button>
-  <button class="tb-btn" data-tool="triangle" title="三角形 (3)">△ 三角</button>
-  <button class="tb-btn" data-tool="pentagon" title="五角形 (5)">⬠ 五角</button>
-  <button class="tb-btn" data-tool="line"     title="直線 (L)">／ 直線</button>
-  <button class="tb-btn" data-tool="path"     title="流線形 (F)">〜 流線</button>
-  <button class="tb-btn" data-tool="text"     title="テキスト (T)">T テキスト</button>
+  <div class="tb-sep"></div>
+  <div class="tb-draw-wrap">
+    <button class="tb-btn primary" id="btn-draw-tool" title="図形描画ツール">図形の描画</button>
+    <div class="tb-draw-panel" id="draw-panel">
+      <button class="tb-btn" data-tool="rect"     title="四角形 (R)">□ 四角形</button>
+      <button class="tb-btn" data-tool="ellipse"  title="真円 (E)">○ 真円</button>
+      <button class="tb-btn" data-tool="triangle" title="三角形 (3)">△ 三角形</button>
+      <button class="tb-btn" data-tool="pentagon" title="五角形 (5)">⬠ 五角形</button>
+      <button class="tb-btn" data-tool="line"     title="直線 (L)">／ 直線</button>
+      <button class="tb-btn" data-tool="path"     title="流線形 (F)">〜 流線形</button>
+      <button class="tb-btn" data-tool="text"     title="テキスト (T)">T テキスト</button>
+    </div>
+  </div>
   <div class="tb-sep"></div>
   <button class="tb-btn primary active" id="btn-grid" title="グリッド表示切替 (G)">⊞ グリッド</button>
   <div class="tb-sep"></div>
@@ -1570,16 +1597,37 @@ document.addEventListener('keyup', e => {
   }
 });
 
-// Tool buttons
-document.querySelectorAll('[data-tool]').forEach(btn => {
-  btn.addEventListener('click', () => setTool(btn.dataset.tool));
+// Draw-tool dropdown
+const drawPanel  = document.getElementById('draw-panel');
+const btnDrawTool = document.getElementById('btn-draw-tool');
+const DRAW_TOOLS = new Set(['rect','ellipse','triangle','pentagon','line','path','text']);
+const DRAW_ICONS = { rect:'□ 四角形', ellipse:'○ 真円', triangle:'△ 三角形', pentagon:'⬠ 五角形', line:'／ 直線', path:'〜 流線形', text:'T テキスト' };
+btnDrawTool.addEventListener('click', e => {
+  e.stopPropagation();
+  drawPanel.classList.toggle('open');
 });
+document.addEventListener('mousedown', e => {
+  if (!drawPanel.contains(e.target) && e.target !== btnDrawTool) drawPanel.classList.remove('open');
+});
+
+// Tool buttons (inside panel + select)
+document.querySelectorAll('[data-tool]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    setTool(btn.dataset.tool);
+    drawPanel.classList.remove('open');
+  });
+});
+
 function setTool(t) {
   S.tool = t;
   document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
   ca.className = t === 'select' ? 'cursor-default' : 'cursor-cross';
   const names = { select:'選択', rect:'四角形', ellipse:'楕円', triangle:'三角形', pentagon:'五角形', line:'直線', path:'流線形', text:'テキスト' };
   document.getElementById('st-tool').textContent = `ツール: ${names[t] || t}`;
+  // Update dropdown trigger button
+  const isDraw = DRAW_TOOLS.has(t);
+  btnDrawTool.classList.toggle('active', isDraw);
+  btnDrawTool.textContent = isDraw ? DRAW_ICONS[t] : '図形の描画';
 }
 
 // ── Keyboard shortcut modal ────────────────────────────────────────
